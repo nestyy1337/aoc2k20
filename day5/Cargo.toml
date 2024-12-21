@@ -1,0 +1,9 @@
+[package]
+name = "day5"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.94"
+advent2k20 = { path = "../" }
+roaring = "0.10.9"

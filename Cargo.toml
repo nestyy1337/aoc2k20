@@ -1,0 +1,11 @@
+[package]
+name = "advent2k20"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.94"
+
+[workspace]
+members = ["day1", "day2", "day3", "day4", "day5", "day6", "day7", "day8"]
+
