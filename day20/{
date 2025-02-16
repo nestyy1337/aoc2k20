@@ -1,0 +1,300 @@
+use std::collections::{HashMap, HashSet};
+
+pub fn parse_tiles<'a>() -> HashSet<Tile> {
+    let input = include_str!("./../input.txt");
+    let v: Vec<&str> = input.split("\n\n").map(|b| b.trim()).collect();
+
+    // vec of id and all the lines
+    let vecs: Vec<(usize, Vec<String>)> = v
+        .iter()
+        .map(|b| {
+            let lines: Vec<String> = b.lines().map(|l| l.to_string()).collect();
+            let id = lines[0]
+                .split_whitespace()
+                .nth(1)
+                .unwrap()
+                .trim_end_matches(":")
+                .parse::<usize>()
+                .unwrap();
+
+            let rest = lines[1..].to_vec();
+            (id, rest)
+        })
+        .collect();
+
+    let mut map = HashSet::new();
+    for (index, l) in vecs {
+        map.insert(Tile::new(index, l.clone()));
+    }
+    map
+}
+
+type TileConents = Vec<String>;
+type Position = (usize, usize);
+
+#[derive(Debug, Hash, Clone, Eq, PartialEq)]
+struct Tile {
+    id: usize,
+    content: TileConents,
+}
+
+impl Tile {
+    fn new(id: usize, contents: TileConents) -> Self {
+        Tile {
+            id: id,
+            content: contents,
+        }
+    }
+
+    fn get_left_border(&self) -> String {
+        self.content
+            .iter()
+            .map(|l| l.chars().next().unwrap().to_string())
+            .collect()
+    }
+
+    fn get_upper_border(&self) -> String {
+        self.content[0].clone()
+    }
+
+    fn rotate90(&self) -> Self {
+        let grid_len = self.content.len();
+        let mut rotated = vec![vec![' '; grid_len]; grid_len];
+
+        for (y, row) in self.content.iter().enumerate() {
+            for (x, ch) in row.chars().enumerate() {
+                rotated[x][grid_len - 1 - y] = ch;
+            }
+        }
+
+        Tile {
+            id: self.id,
+            content: rotated
+                .iter()
+                .map(|row| row.iter().collect::<String>())
+                .collect(),
+        }
+    }
+
+    fn flip_horizontal(&self) -> Self {
+        Tile {
+            id: self.id,
+            content: self
+                .content
+                .iter()
+                .map(|row| row.chars().rev().collect())
+                .collect(),
+        }
+    }
+
+    fn flip_vertical(&self) -> Self {
+        Tile {
+            id: self.id,
+            content: self.content.iter().rev().cloned().collect(),
+        }
+    }
+
+    fn all_orientations(&self) -> Vec<Tile> {
+        let mut orientations = Vec::with_capacity(8);
+        let mut current = self.clone();
+
+        for _ in 0..4 {
+            orientations.push(current.clone());
+            current = current.rotate90();
+        }
+
+        for i in 0..4 {
+            current = orientations[i].clone();
+            orientations.push(current.flip_horizontal());
+        }
+
+        orientations
+    }
+
+    fn get_right_border(&self) -> String {
+        self.content
+            .iter()
+            .map(|l| l.chars().last().unwrap())
+            .collect()
+    }
+
+    fn get_lower_border(&self) -> String {
+        self.content.last().unwrap().clone()
+    }
+}
+
+#[derive(Debug, Clone)]
+struct Grid {
+    tiles: HashMap<(usize, usize), Tile>,
+    width: usize,
+}
+
+impl Grid {
+    fn new(total_tiles: usize) -> Self {
+        Grid {
+            tiles: HashMap::new(),
+            width: total_tiles,
+        }
+    }
+
+    fn place(&mut self, pos: (usize, usize), tile: Tile) {
+        self.tiles.insert(pos, tile);
+    }
+
+    fn get_neighbors(&self, pos: &Position) -> Vec<Option<&Tile>> {
+        let mut v = Vec::new();
+        if pos.1 > 0 {
+            v.push(self.tiles.get(&(pos.0, pos.1 - 1)));
+        } else {
+            v.push(None);
+        }
+        if pos.0 > 0 {
+            v.push(self.tiles.get(&(pos.0 - 1, pos.1)));
+        } else {
+            v.push(None);
+        }
+
+        v
+    }
+
+    fn get_next_pos(&self, current_pos: &Position) -> Position {
+        let (x, y) = *current_pos;
+        if x + 1 >= self.width {
+            (0, y + 1)
+        } else {
+            (x + 1, y)
+        }
+    }
+
+    fn fit_new_tile(&mut self, pos: Position, tile: Tile) -> Vec<Tile> {
+        let orientations = tile.all_orientations();
+        let neighbors = self.get_neighbors(&pos);
+
+        if let Some(upper) = neighbors[0] {}
+        if let Some(left) = neighbors[1] {}
+
+        orientations
+            .into_iter()
+            .filter(|oriented_tile| {
+                if let Some(upper) = neighbors[0] {
+                    if oriented_tile.get_upper_border() != upper.get_lower_border() {
+                        return false;
+                    }
+                }
+                if let Some(left) = neighbors[1] {
+                    if oriented_tile.get_left_border() != left.get_right_border() {
+                        return false;
+                    }
+                }
+                true
+            })
+            .collect()
+    }
+
+    fn remove_borders(&mut self) {
+        for ((x, y), tile) in &mut self.tiles {
+            //remove borders
+            tile.content.remove(0);
+            tile.content.remove(tile.content.len() - 1);
+            tile.content
+                .iter_mut()
+                .map(|l| l.remove(0))
+                .collect::<String>();
+            tile.content
+                .iter_mut()
+                .map(|l| l.remove(l.len() - 1))
+                .collect::<String>();
+        }
+
+        //
+    }
+    fn build_image(&self) -> Vec<String> {
+        let tile_size = self.tiles.values().next().unwrap().content.len() - 2;
+        let dimension = self.width; // number of tiles in a row/column
+        let full_size = tile_size * dimension;
+
+        let mut big_image = vec![vec![' '; full_size]; full_size];
+
+        for y_t in 0..dimension {
+            for x_t in 0..dimension {
+                let tile = &self.tiles[&(x_t, y_t)];
+
+                for row_in_tile in 1..tile_size + 1 {
+                    let row_str = &tile.content[row_in_tile];
+                    let inner = &row_str[1..row_str.len() - 1];
+
+                    let global_row = y_t * tile_size + (row_in_tile - 1);
+                    let global_col_start = x_t * tile_size;
+                    for (dx, ch) in inner.chars().enumerate() {
+                        big_image[global_row][global_col_start + dx] = ch;
+                    }
+                }
+            }
+        }
+
+        big_image
+            .into_iter()
+            .map(|row_of_chars| row_of_chars.into_iter().collect())
+            .collect()
+    }
+}
+
+fn solve_arrangement(
+    pos: (usize, usize),
+    current_map: Grid,
+    available_tiles: &mut HashSet<Tile>,
+) -> Option<Grid> {
+    if available_tiles.is_empty() {
+        return Some(current_map);
+    }
+
+    let mut transformed_gird = current_map.clone();
+
+    for tile in available_tiles.iter() {
+        let possible = transformed_gird.fit_new_tile(pos, tile.clone());
+
+        for possible_tile in possible {
+            transformed_gird.place(pos, possible_tile);
+            let next_pos = transformed_gird.get_next_pos(&pos);
+
+            let mut new_available = available_tiles.clone();
+            new_available.remove(tile);
+
+            if let Some(solution) =
+                solve_arrangement(next_pos, transformed_gird.clone(), &mut new_available)
+            {
+                return Some(solution);
+            }
+        }
+    }
+    None
+}
+
+pub fn part2() {
+    let mut tiles = parse_tiles();
+
+    let grid = Grid::new(12);
+    let OUR_gird = solve_arrangement((0, 0), grid, &mut tiles).unwrap();
+    let image = OUR_gird.build_image();
+
+    image
+}
+
+fn find_monster(image: Vec<String>) -> usize {
+    for line in image {}
+}
+
+fn has_pattern(line: String) -> bool {
+    let indexes = [0, 5, 6, 10, 11, 15, 16, 17];
+    let v = line.chars().collect();
+    let mut matched = 0;
+    for index in indexes {
+        if v[index] == '#' {
+            matched += 1;
+        }
+    }
+    if matched == index.len() {
+        true
+    }
+    false
+}

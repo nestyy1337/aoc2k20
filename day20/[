@@ -1,0 +1,136 @@
+use std::collections::{HashMap, HashSet};
+
+pub fn parse_tiles<'a>() -> HashMap<usize, Vec<String>> {
+    let input = include_str!("./../input.txt");
+    let v: Vec<&str> = input.split("\n\n").map(|b| b.trim()).collect();
+
+    // vec of id and all the lines
+    let vecs: Vec<(usize, Vec<String>)> = v
+        .iter()
+        .map(|b| {
+            let lines: Vec<String> = b.lines().map(|l| l.to_string()).collect();
+            let id = lines[0]
+                .split_whitespace()
+                .nth(1)
+                .unwrap()
+                .trim_end_matches(":")
+                .parse::<usize>()
+                .unwrap();
+
+            let rest = lines[1..].to_vec();
+            (id, rest)
+        })
+        .collect();
+
+    let mut map = HashMap::new();
+    for (i, l) in vecs {
+        map.insert(i, l);
+    }
+    map
+}
+
+pub fn part1() {
+    let input = parse_tiles();
+    let cornerss = input
+        .iter()
+        .filter_map(|b| {
+            let mut corners = Vec::new();
+            corners.push(b.1[0].clone());
+            corners.push(b.1[b.1.len() - 1].clone());
+            let left: String =
+                b.1.iter()
+                    .map(|l| l.chars().next().unwrap().to_string())
+                    .collect();
+            let right: String =
+                b.1.iter()
+                    .map(|l| l.chars().last().unwrap().to_string())
+                    .collect();
+            corners.push(left);
+            corners.push(right);
+            let matching_sides = input
+                .iter()
+                .filter(|(other_id, other_tile)| b.0 != *other_id)
+                .fold(0, |acc, (_, other)| {
+                    let other_borders = vec![
+                        other[0].to_string(),
+                        other[other.len() - 1].to_string(),
+                        other
+                            .iter()
+                            .map(|l| l.chars().next().unwrap())
+                            .collect::<String>(),
+                        other
+                            .iter()
+                            .map(|l| l.chars().last().unwrap())
+                            .collect::<String>(),
+                    ];
+
+                    let matches: usize = corners
+                        .iter()
+                        .filter(|&border| {
+                            other_borders.iter().any(|other_border| {
+                                border == other_border
+                                    || border == &other_border.chars().rev().collect::<String>()
+                            })
+                        })
+                        .count();
+
+                    acc + matches
+                });
+            if matching_sides == 2 {
+                return Some(b.0);
+            } else {
+                return None;
+            };
+        })
+        .collect::<Vec<_>>();
+    println!("corners: {:?}", cornerss);
+    println!("COR: {:?}", cornerss.iter().copied().product::<usize>());
+}
+
+fn rotate90(block: &Vec<&str>) -> Vec<String> {
+    let grid_len = block.len();
+    let mut rotated: Vec<Vec<char>> = block.iter().map(|l| l.chars().collect()).collect();
+    for y in 0..block.len() {
+        for x in 0..block.len() {
+            rotated[y][grid_len - 1 - x] = rotated[x][y];
+        }
+    }
+    let ret: Vec<String> = rotated.iter().map(|l| l.iter().collect()).collect();
+    ret
+}
+
+fn flip_horizontally(block: &Vec<&str>) -> Vec<String> {
+    block.iter().map(|l| l.chars().rev().collect()).collect()
+}
+
+fn flip_vertically(block: &Vec<&str>) -> Vec<String> {
+    block.iter().rev().map(|l| l.to_string()).collect()
+}
+
+fn part2() {
+    let input = parse_tiles();
+    let mut available_tiles = HashSet::new();
+    for (i, _) in input {
+        available_tiles.insert(i);
+    }
+}
+type TileConents = Vec<String>;
+
+struct Tile {
+    id: usize,
+    content: TileConents,
+}
+
+struct Grid {
+    tiles: HashMap<(usize, usize), Tile>,
+}
+
+fn solve_arrangement(
+    pos: (usize, usize),
+    current_map: Grid,
+    available_tiles: HashSet<usize>,
+) -> Option<Vec<String>> {
+    if available_tiles.is_empty() {
+        return Some(current_map);
+    }
+}
